@@ -25,6 +25,7 @@ import { resolveTurn } from './engine/turn';
 import { resolveChoice } from './engine/events';
 import { applyEffects } from './engine/effects';
 import { startMission } from './engine/covert';
+import { buyOnMarket, proposeTradePact, requestAid, type Resource } from './engine/trade';
 import { hashSeed, turnRng } from './engine/rng';
 import { SECRET_REQUIRES_INDUSTRY, TECH_MAX } from './engine/balance';
 import { ALL_EVENTS } from './data/events/index';
@@ -193,6 +194,9 @@ export interface FulcrumStore {
   startCovert: (target: NationId, type: CovertMission['type']) => void;
   improveRelations: (target: NationId) => void;
   guarantee: (target: NationId) => void;
+  requestAid: (target: NationId, resource: Resource) => void;
+  proposeTradePact: (target: NationId) => void;
+  buyOnMarket: (resource: Resource, units: number) => void;
 
   saveSlot: (slot: number) => boolean;
   loadSlot: (slot: number) => boolean;
@@ -344,6 +348,27 @@ export const useStore = create<FulcrumStore>()((set, get) => ({
       turnRng(game.seed, game.turn),
     );
     set({ game: next });
+  },
+
+  requestAid: (target, resource) => {
+    const { game } = get();
+    if (!orderable(game)) return;
+    const next = requestAid(game, game.playerNation, target, resource);
+    if (next !== game) set({ game: next });
+  },
+
+  proposeTradePact: (target) => {
+    const { game } = get();
+    if (!orderable(game)) return;
+    const next = proposeTradePact(game, game.playerNation, target);
+    if (next !== game) set({ game: next });
+  },
+
+  buyOnMarket: (resource, units) => {
+    const { game } = get();
+    if (!orderable(game)) return;
+    const next = buyOnMarket(game, game.playerNation, resource, units);
+    if (next !== game) set({ game: next });
   },
 
   saveSlot: (slot) => {

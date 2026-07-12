@@ -395,7 +395,40 @@ describe('step 6: covert missions for opportunist majors', () => {
   });
 });
 
-describe('step 7: peace feelers when losing badly', () => {
+describe('step 7: resource trade', () => {
+  it('asks the friendliest living AI partner first, never the player', () => {
+    const s = frozenTestState((st) => {
+      st.playerNation = 'POL'; // GER must not pull from POL even though POL could spare it
+      st.nations['GER'] = { ...st.nations['GER'], stockpile: { ...st.nations['GER'].stockpile, oil: 5 } };
+      st.nations['FRA'] = {
+        ...st.nations['FRA'],
+        relations: { ...st.nations['FRA'].relations, GER: 20 }, // clears the willingness gate
+      };
+      st.nations['GER'] = {
+        ...st.nations['GER'],
+        stockpile: { ...st.nations['GER'].stockpile, oil: 5 },
+        relations: { ...st.nations['GER'].relations, FRA: 20 },
+      };
+    });
+    const out = runAI(s, rng(), { includePlayer: false });
+    expect(out.nations['GER'].stockpile.oil).toBe(25); // 5 + AID_REQUEST_AMOUNT (20)
+    expect(out.nations['FRA'].stockpile.oil).toBe(30); // 50 − 20
+    expect(out.nations['POL'].stockpile.oil).toBe(50); // untouched
+  });
+
+  it('falls back to the market when no partner is willing or able', () => {
+    const s = frozenTestState((st) => {
+      st.nations['GER'] = { ...st.nations['GER'], stockpile: { ...st.nations['GER'].stockpile, oil: 5 } };
+      // relations stay hostile/neutral to everyone — no partner clears the gate
+    });
+    const before = s.nations['GER'].ic;
+    const out = runAI(s, rng(), { includePlayer: false });
+    expect(out.nations['GER'].stockpile.oil).toBeGreaterThan(5);
+    expect(out.nations['GER'].ic).toBeLessThan(before);
+  });
+});
+
+describe('step 8: peace feelers when losing badly', () => {
   it('sets the transient flag and reports to the enemy war leader', () => {
     const s = frozenTestState((st) => {
       st.playerNation = 'GER'; // so the report to the war leader is delivered

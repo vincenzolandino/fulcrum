@@ -140,6 +140,25 @@ export const AI_ALLOCATION: Record<string, { army: number; air: number; navy: nu
   consolidation: { army: 0.3, air: 0.1, navy: 0.1, civilian: 0.5 },
 };
 
+// ---- Resource trade & market ----
+// A nation counts as "short" of a resource below this stockpile level, and
+// only a short nation ever receives via a pact, an aid request, or the
+// market. A giver must stay at or above this level after giving, so trade
+// never starves the giver to feed the recipient.
+export const TRADE_SHORTAGE_THRESHOLD = 15;
+export const TRADE_PACT_TRANSFER = 8; // per active trade pact, per resource, per turn
+export const AID_REQUEST_AMOUNT = 20; // one-time grant via the Request Aid action
+// AI/relations gate for a request or a pact proposal: the asking nation's
+// relations with the target must be at least this, or the target's faction
+// must match the asker's, to be granted at all.
+export const AID_RELATIONS_GATE = 10;
+// World market: buying resources with IC. Cost per unit rises geometrically
+// within a single turn's purchase (unitCost × growth^unitsAlreadyBoughtThisBuy),
+// so leaning hard on the market gets expensive fast; it resets every turn.
+export const MARKET_BASE_COST = 3; // IC per unit, first unit of a purchase
+export const MARKET_COST_GROWTH = 0.15; // +15% per unit already bought in this purchase
+export const MARKET_MAX_PER_TURN = 40; // cap per resource per buy action
+
 // ---- Events / game flow ----
 export const MAX_PLAYER_EVENTS_PER_TURN = 3;
 export const FINAL_TURN = 131; // December 1948

@@ -291,6 +291,16 @@ describe('economy and military effects', () => {
     expect(out2.nations.GER.ic).toBe(145);
   });
 
+  it('resource adjusts one stockpile line and clamps to 0..999', () => {
+    const out = apply(frozenTestState(), { t: 'resource', nation: 'GER', resource: 'oil', delta: 30 });
+    expect(out.nations.GER.stockpile.oil).toBe(80); // 50 + 30
+    expect(out.nations.GER.stockpile.steel).toBe(50); // untouched
+    const drained = apply(frozenTestState(), { t: 'resource', nation: 'GER', resource: 'food', delta: -999 });
+    expect(drained.nations.GER.stockpile.food).toBe(0);
+    const overfull = apply(frozenTestState(), { t: 'resource', nation: 'GER', resource: 'steel', delta: 5000 });
+    expect(overfull.nations.GER.stockpile.steel).toBe(999);
+  });
+
   it('manpower clamps at 0', () => {
     const out = apply(frozenTestState(), { t: 'manpower', nation: 'POL', delta: -400 });
     expect(out.nations.POL.manpower).toBe(0); // 300 − 400

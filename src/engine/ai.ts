@@ -1,12 +1,14 @@
 // AI for every non-player nation (and the player too, when the headless sim
-// asks for it). Implements the plan's 7-step loop each turn, per nation:
+// asks for it). Implements the plan's original 7-step loop plus an 8th added
+// for the resource-trade feedback pass, each turn, per nation:
 //   1. postures per front from local power ratios
 //   2. redeploy idle armies toward the nearest front (BFS), garrison capital
 //   3. ambition-driven war declarations against claims (DoW threshold formula)
 //   4. faction gravity for neutrals + democracy guarantees for threatened minors
 //   5. production allocation + research priority by focus
 //   6. covert network building for opportunist majors
-//   7. peace feelers when losing badly
+//   7. resource trade — ask a friendly AI partner first, then the market
+//   8. peace feelers when losing badly
 //
 // Dead nations do nothing. Puppet nations act only defensively: they copy the
 // master's faction, join the master's wars on the master's side, never launch
@@ -31,6 +33,7 @@ import type {
 } from './types';
 import { totalPower } from './power';
 import { applyEffects } from './effects';
+import { buyOnMarket, canSpare, isShort, requestAid, willingToHelp, RESOURCES } from './trade';
 import { REGIONS } from '../data/regions';
 import { MAJOR_IDS } from '../data/nations';
 import {
@@ -51,7 +54,9 @@ import {
   AI_PEACE_WAR_SUPPORT,
   AI_SECRET_TENSION_GATE,
   DEMOCRACY_WAR_TENSION_GATE,
+  AID_REQUEST_AMOUNT,
   GUARANTEE_TENSION_GATE,
+  MARKET_BASE_COST,
   NETWORK_BUILD_TURNS,
   OP_NETWORK_REQUIREMENTS,
   POWER_ARMOR_BONUS,
@@ -473,7 +478,40 @@ function runCovertAI(s: GameState, id: NationId): GameState {
 }
 
 // ---------------------------------------------------------------------------
-// Step 7: peace feelers when losing badly. Actual peace terms arrive as
+// Step 7 (numbering follows the module header list; this runs alongside
+// covert as an economic-diplomacy behavior, not war-related): resource
+// trade. A nation short on oil/steel/food asks the friendliest living AI
+// partner that can spare it first — never the player, since no aid-request
+// inbox is modeled for the human side, and a silent AI pull on the player's
+// stockpile would drain it with no way to see or refuse the request. With no
+// partner able to help, it falls back to the market, spending its own ic, up
+// to a modest per-turn draw so it doesn't crowd out production spending.
+
+const AI_MARKET_DRAW_UNITS = 10;
+
+function runTradeAI(s: GameState, id: NationId): GameState {
+  let out = s;
+  for (const resource of RESOURCES) {
+    const n = out.nations[id];
+    if (!isShort(n, resource)) continue;
+
+    const partners = Object.values(out.nations)
+      .filter((p) => p.alive && p.id !== id && p.id !== out.playerNation)
+      .filter((p) => willingToHelp(p, n) && canSpare(p, resource, AID_REQUEST_AMOUNT))
+      .sort((a, b) => (n.relations[b.id] ?? 0) - (n.relations[a.id] ?? 0) || a.id.localeCompare(b.id));
+
+    if (partners.length > 0) {
+      out = requestAid(out, id, partners[0].id, resource);
+      continue;
+    }
+    const affordable = Math.min(AI_MARKET_DRAW_UNITS, Math.floor(n.ic / MARKET_BASE_COST));
+    if (affordable > 0) out = buyOnMarket(out, id, resource, affordable);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Step 8: peace feelers when losing badly. Actual peace terms arrive as
 // content events; here the AI raises the transient _peaceseek_ flag and sends
 // a diplomatic report to the enemy war leader (delivered only if that leader
 // is the player — effects.ts drops AI-to-AI mail).
@@ -559,7 +597,8 @@ function runNation(s: GameState, id: NationId, rng: Rng): GameState {
   out = runProduction(out, id); // step 5
   if (!puppet) {
     out = runCovertAI(out, id); // step 6
-    out = runPeaceAI(out, id, rng); // step 7
+    out = runTradeAI(out, id); // step 7
+    out = runPeaceAI(out, id, rng); // step 8
   }
   return out;
 }

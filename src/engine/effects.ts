@@ -15,7 +15,7 @@ import type {
   Rng,
   War,
 } from './types';
-import { TECH_MAX, TENSION_PER_ANNEX, TENSION_PER_DOW } from './balance';
+import { STOCKPILE_MAX, TECH_MAX, TENSION_PER_ANNEX, TENSION_PER_DOW } from './balance';
 
 const RELATION_MIN = -100;
 const RELATION_MAX = 100;
@@ -23,6 +23,7 @@ const PCT_MIN = 0;
 const PCT_MAX = 100; // stability, warSupport, spy networks, army strength/equipment, tension
 const NAVY_AIR_MIN = 0;
 const NAVY_AIR_MAX = 1000;
+const STOCKPILE_MIN = 0;
 
 // Flag-key conventions shared with other engine modules.
 /** Permanent ic modifier accumulated by { t: 'ic' } effects; economy.ts reads it. */
@@ -319,6 +320,12 @@ function applyEffect(state: GameState, e: Effect, _rng: Rng): GameState {
       const base = typeof cur === 'number' ? cur : 0;
       const patched = withNation(state, e.nation, { ic: Math.max(0, n.ic + e.delta) });
       return { ...patched, flags: { ...patched.flags, [key]: base + e.delta } };
+    }
+    case 'resource': {
+      const n = state.nations[e.nation];
+      if (!n) return state;
+      const value = clamp(n.stockpile[e.resource] + e.delta, STOCKPILE_MIN, STOCKPILE_MAX);
+      return withNation(state, e.nation, { stockpile: { ...n.stockpile, [e.resource]: value } });
     }
     case 'manpower': {
       const n = state.nations[e.nation];

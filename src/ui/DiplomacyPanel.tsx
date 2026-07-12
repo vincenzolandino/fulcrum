@@ -1,10 +1,18 @@
 // The foreign ministry ledger: every living nation, sorted warmest first,
-// with guarantee and improve-relations actions from the store. Pacts and
-// standing guarantees show inline so the table reads as one sheet.
+// with guarantee, improve-relations, and resource-trade actions from the
+// store. Pacts and standing guarantees show inline so the table reads as one
+// sheet. A resource picker per row drives Request Aid and Propose Trade Pact;
+// Request Aid only lights up when the player is actually short of the
+// selected resource, matching the engine's own no-op-if-not-short rule.
 
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Nation } from '../engine/types';
+import type { Resource } from '../engine/trade';
+import { isShort } from '../engine/trade';
 import { improvedRelationsFlag, useStore } from '../store';
+
+const RESOURCES: Resource[] = ['oil', 'steel', 'food'];
 
 const styles: Record<string, CSSProperties> = {
   heading: { margin: '0 0 10px', fontSize: 16 },
@@ -28,6 +36,7 @@ const styles: Record<string, CSSProperties> = {
   },
   faction: { fontSize: 10, color: 'var(--text-dim)' },
   tag: { fontSize: 10, color: 'var(--accent)' },
+  actionRow: { display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' },
   btn: {
     background: 'transparent',
     color: 'var(--accent)',
@@ -35,12 +44,19 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 2,
     padding: '2px 7px',
     fontSize: 10.5,
-    marginRight: 4,
   },
   btnDisabled: {
     color: 'var(--text-dim)',
-    borderColor: 'var(--border)',
+    border: '1px solid var(--border)',
     cursor: 'not-allowed',
+  },
+  select: {
+    background: 'var(--bg)',
+    color: 'var(--text)',
+    border: '1px solid var(--border)',
+    borderRadius: 2,
+    fontSize: 10.5,
+    padding: '2px 3px',
   },
 };
 
@@ -51,6 +67,10 @@ export default function DiplomacyPanel() {
   const game = useStore((s) => s.game);
   const improveRelations = useStore((s) => s.improveRelations);
   const guarantee = useStore((s) => s.guarantee);
+  const requestAid = useStore((s) => s.requestAid);
+  const proposeTradePact = useStore((s) => s.proposeTradePact);
+  const [resourceByTarget, setResourceByTarget] = useState<Record<string, Resource>>({});
+
   if (game === null) return null;
   const me = game.nations[game.playerNation];
   if (me === undefined) return null;
@@ -76,6 +96,9 @@ export default function DiplomacyPanel() {
             const guaranteed = me.guarantees.includes(n.id);
             const improved = game.flags[improvedRelationsFlag(n.id)] === true;
             const pacts = me.pacts.filter((p) => p.with === n.id).map((p) => p.kind);
+            const hasTradePact = pacts.includes('trade');
+            const resource = resourceByTarget[n.id] ?? 'oil';
+            const canAskForAid = isShort(me, resource);
             return (
               <tr key={n.id}>
                 <td style={styles.td}>
@@ -91,24 +114,60 @@ export default function DiplomacyPanel() {
                   {Math.round(rel(n))}
                 </td>
                 <td style={styles.td}>
-                  <button
-                    type="button"
-                    aria-label={`Improve relations with ${n.name}`}
-                    style={{ ...styles.btn, ...(improved ? styles.btnDisabled : undefined) }}
-                    disabled={improved}
-                    onClick={() => improveRelations(n.id)}
-                  >
-                    Improve
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Guarantee ${n.name}`}
-                    style={{ ...styles.btn, ...(guaranteed ? styles.btnDisabled : undefined) }}
-                    disabled={guaranteed}
-                    onClick={() => guarantee(n.id)}
-                  >
-                    Guarantee
-                  </button>
+                  <div style={styles.actionRow}>
+                    <button
+                      type="button"
+                      aria-label={`Improve relations with ${n.name}`}
+                      style={{ ...styles.btn, ...(improved ? styles.btnDisabled : undefined) }}
+                      disabled={improved}
+                      onClick={() => improveRelations(n.id)}
+                    >
+                      Improve
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Guarantee ${n.name}`}
+                      style={{ ...styles.btn, ...(guaranteed ? styles.btnDisabled : undefined) }}
+                      disabled={guaranteed}
+                      onClick={() => guarantee(n.id)}
+                    >
+                      Guarantee
+                    </button>
+                  </div>
+                  <div style={{ ...styles.actionRow, marginTop: 4 }}>
+                    <select
+                      aria-label={`Resource to trade with ${n.name}`}
+                      style={styles.select}
+                      value={resource}
+                      onChange={(e) =>
+                        setResourceByTarget({ ...resourceByTarget, [n.id]: e.target.value as Resource })
+                      }
+                    >
+                      {RESOURCES.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      aria-label={`Request ${resource} aid from ${n.name}`}
+                      style={{ ...styles.btn, ...(canAskForAid ? undefined : styles.btnDisabled) }}
+                      disabled={!canAskForAid}
+                      onClick={() => requestAid(n.id, resource)}
+                    >
+                      Request Aid
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Propose a trade pact with ${n.name}`}
+                      style={{ ...styles.btn, ...(hasTradePact ? styles.btnDisabled : undefined) }}
+                      disabled={hasTradePact}
+                      onClick={() => proposeTradePact(n.id)}
+                    >
+                      Trade Pact
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

@@ -137,6 +137,7 @@ export type Effect =
   | { t: 'breakPact'; a: NationId; b: NationId }
   | { t: 'addClaim'; nation: NationId; region: RegionId }
   | { t: 'ic'; nation: NationId; delta: number }
+  | { t: 'resource'; nation: NationId; resource: 'oil' | 'steel' | 'food'; delta: number }
   | { t: 'manpower'; nation: NationId; delta: number }
   | { t: 'navy'; nation: NationId; delta: number }
   | { t: 'air'; nation: NationId; delta: number }

@@ -4,9 +4,9 @@
 //
 // Order (per the implementation plan): clear transient flags → apply army
 // redeployment arrivals → AI → combat → (war-dead tally, entrenchment growth)
-// → economy → research → covert → politics → diplomacy drift → events →
-// successions → chronicle → report pruning → game-over check (+ epilogue) →
-// turn + 1.
+// → economy → trade → research → covert → politics → diplomacy drift →
+// events → successions → chronicle → report pruning → game-over check
+// (+ epilogue) → turn + 1.
 //
 // Flag conventions owned or consumed here:
 //   '_'-prefixed flags are transient and cleared at the start of every
@@ -23,6 +23,7 @@ import { turnRng } from './rng';
 import { runAI } from './ai';
 import { runCombat } from './combat';
 import { runEconomy } from './economy';
+import { runTrade } from './trade';
 import { runResearch } from './research';
 import { runCovert, succession } from './covert';
 import { runPolitics } from './politics';
@@ -191,6 +192,7 @@ export function resolveTurn(
   s = accumulateWarDead(s);
   s = growEntrenchment(s);
   s = runEconomy(s, rng);
+  s = runTrade(s, rng);
   s = runResearch(s, rng);
   s = runCovert(s, rng);
   s = runSuccessionSweep(s, rng, false); // covert handled its own; clear the signals
