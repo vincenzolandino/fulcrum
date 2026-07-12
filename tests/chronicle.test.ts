@@ -39,6 +39,19 @@ describe('HISTORY_TIMELINE data integrity', () => {
     }
   });
 
+  it('gives every milestone at least one otherwise branch, ending in an always catch-all', () => {
+    for (const m of HISTORY_TIMELINE) {
+      expect(m.otherwise.length).toBeGreaterThanOrEqual(1);
+      for (const branch of m.otherwise) {
+        expect(branch.text.length).toBeGreaterThan(10);
+        // Every branch's text must describe THIS timeline, not restate the
+        // real-history sentence it's standing in for.
+        expect(branch.text).not.toBe(m.text);
+      }
+      expect(m.otherwise[m.otherwise.length - 1].when).toEqual({ t: 'always' });
+    }
+  });
+
   it('is sorted by turn', () => {
     for (let i = 1; i < HISTORY_TIMELINE.length; i++) {
       expect(HISTORY_TIMELINE[i].turn).toBeGreaterThanOrEqual(HISTORY_TIMELINE[i - 1].turn);
@@ -57,12 +70,17 @@ describe('runChronicle', () => {
     expect(out.chronicle[0].turn).toBe(ANSCHLUSS_TURN);
   });
 
-  it('logs a divergence when the game left the historical path', () => {
-    // March 1938 with Austria still independent: history turned here.
+  it('logs a divergence when the game left the historical path, describing what happened instead', () => {
+    // March 1938 with Austria still independent: history turned here. The
+    // milestone's own real-history sentence must never appear — only the
+    // matched otherwise branch describing THIS timeline.
+    const milestone = HISTORY_TIMELINE.find((m) => m.turn === ANSCHLUSS_TURN)!;
     const out = runChronicle(deepFreeze(stateAtTurn(ANSCHLUSS_TURN)));
     expect(out.chronicle).toHaveLength(1);
     expect(out.chronicle[0].divergence).toBe(true);
     expect(out.chronicle[0].text.startsWith(DIVERGENCE_PREFIX)).toBe(true);
+    expect(out.chronicle[0].text).not.toContain(milestone.text);
+    expect(out.chronicle[0].text).toContain(milestone.otherwise[milestone.otherwise.length - 1].text);
   });
 
   it('returns the state unchanged on turns without a milestone', () => {

@@ -187,6 +187,23 @@ export interface ChronicleEntry {
   divergence: boolean;
 }
 
+/**
+ * A real-history event the Chronicle checks the game against each turn (see
+ * historyTimeline.ts for the actual data). `matches` tests whether the game
+ * tracked history; on a match `text` is logged as-is. On a miss, `otherwise`
+ * is evaluated in order and the first branch whose `when` holds supplies the
+ * alternate-outcome text — chronicle.ts must never fall back to `text` on a
+ * divergence, since that would describe the real history that did NOT
+ * happen instead of what did. Every milestone's `otherwise` list must end
+ * with a `{ t: 'always' }` catch-all branch.
+ */
+export interface HistoryMilestone {
+  turn: number;
+  text: string;
+  matches: Condition;
+  otherwise: { text: string; when: Condition }[];
+}
+
 export interface CovertMission {
   id: string;
   owner: NationId;
