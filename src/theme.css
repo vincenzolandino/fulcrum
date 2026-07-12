@@ -61,6 +61,7 @@ button {
 .game-map {
   flex: 1;
   min-width: 0;
+  position: relative; /* anchors RegionPopover's absolute positioning */
   border: 1px solid var(--border);
   border-radius: 3px;
   overflow: hidden;

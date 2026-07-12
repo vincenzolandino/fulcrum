@@ -8,6 +8,7 @@ import { useStore } from './store';
 import NationPicker from './ui/NationPicker';
 import TopBar from './ui/TopBar';
 import MapView from './ui/MapView';
+import RegionPopover from './ui/RegionPopover';
 import SidePanel from './ui/SidePanel';
 import EventModal from './ui/EventModal';
 import BattleSpotlight from './ui/BattleSpotlight';
@@ -34,6 +35,7 @@ function GameScreen() {
             onSelect={setSelectedRegion}
             playerNation={game.playerNation}
           />
+          <RegionPopover />
         </div>
         <SidePanel />
       </main>

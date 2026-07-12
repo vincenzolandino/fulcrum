@@ -194,6 +194,7 @@ export interface FulcrumStore {
   startCovert: (target: NationId, type: CovertMission['type']) => void;
   improveRelations: (target: NationId) => void;
   guarantee: (target: NationId) => void;
+  declareWar: (target: NationId) => void;
   requestAid: (target: NationId, resource: Resource) => void;
   proposeTradePact: (target: NationId) => void;
   buyOnMarket: (resource: Resource, units: number) => void;
@@ -207,6 +208,50 @@ export interface FulcrumStore {
 /** True when the player may still issue orders on this game. */
 const orderable = (game: GameState | null): game is GameState =>
   game !== null && game.gameOver === null;
+
+/** True when `a` and `b` are on opposing sides of any war. Exported for the map UI. */
+export const atWar = (game: GameState, a: NationId, b: NationId): boolean =>
+  game.wars.some(
+    (w) =>
+      (w.attackers.includes(a) && w.defenders.includes(b)) ||
+      (w.attackers.includes(b) && w.defenders.includes(a)),
+  );
+
+/**
+ * True when the player could declare war on `target` right now: both alive,
+ * not the player itself, not already at war, and not the same non-neutral
+ * faction (mirrors the AI's own "never against one's own faction" rule —
+ * neutral-vs-neutral wars are allowed, minor nations do sometimes fight).
+ * Exported so the map UI can gate the button and explain a disabled one.
+ */
+export function canDeclareWar(game: GameState, target: NationId): boolean {
+  const me = game.nations[game.playerNation];
+  const t = game.nations[target];
+  if (!me || !t || !t.alive || target === game.playerNation) return false;
+  if (atWar(game, game.playerNation, target)) return false;
+  if (me.faction !== 'neutral' && me.faction === t.faction) return false;
+  return true;
+}
+
+/**
+ * Every nation that would join `target`'s side the moment war is declared:
+ * its guarantors plus its alliance partners. Pure preview math mirroring the
+ * declareWar effect's own coalition-joining rule, so the UI can warn the
+ * player before they commit. Excludes the player itself and the dead.
+ */
+export function coalitionOf(game: GameState, target: NationId): NationId[] {
+  const t = game.nations[target];
+  if (!t) return [];
+  const ids = new Set<NationId>();
+  for (const n of Object.values(game.nations)) {
+    if (n.guarantees.includes(target)) ids.add(n.id);
+  }
+  for (const p of t.pacts) {
+    if (p.kind === 'alliance') ids.add(p.with);
+  }
+  ids.delete(game.playerNation);
+  return [...ids].filter((id) => game.nations[id]?.alive === true).sort();
+}
 
 export const useStore = create<FulcrumStore>()((set, get) => ({
   game: null,
@@ -263,6 +308,14 @@ export const useStore = create<FulcrumStore>()((set, get) => ({
     // arrival pass would happily teleport, so the store is the gatekeeper.
     if (game.regions[region] === undefined) return;
     if (!(REGIONS[army.location]?.adjacent ?? []).includes(region)) return;
+    // Redeploy moves the army's location unconditionally on arrival — it is
+    // not a combat action. Walking it straight into a region held by a
+    // nation the player is at war with would plant it there uncontested,
+    // bypassing combat entirely (discoverBattles only credits armies
+    // adjacent to a hostile region, not already standing inside one). Attack
+    // a hostile region via posture instead; redeploy is for friendly and
+    // non-hostile ground.
+    if (atWar(game, game.playerNation, game.regions[region].controller)) return;
     const next = withPlayerArmy(game, armyId, (a) => ({ ...a, moveTarget: region }));
     if (next !== null) set({ game: next });
   },
@@ -344,6 +397,17 @@ export const useStore = create<FulcrumStore>()((set, get) => ({
     if (me.guarantees.includes(target)) return;
     const next = applyEffects(
       [{ t: 'guarantee', by: game.playerNation, of: target }],
+      game,
+      turnRng(game.seed, game.turn),
+    );
+    set({ game: next });
+  },
+
+  declareWar: (target) => {
+    const { game } = get();
+    if (!orderable(game) || !canDeclareWar(game, target)) return;
+    const next = applyEffects(
+      [{ t: 'declareWar', attacker: game.playerNation, defender: target }],
       game,
       turnRng(game.seed, game.turn),
     );

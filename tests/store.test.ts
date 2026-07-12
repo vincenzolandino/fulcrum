@@ -3,7 +3,7 @@
 // save/load/export/import surface against a localStorage mock.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { improvedRelationsFlag, saveKey, useStore } from '../src/store';
+import { atWar, canDeclareWar, coalitionOf, improvedRelationsFlag, saveKey, useStore } from '../src/store';
 import { REGIONS } from '../src/data/regions';
 import { SECRET_REQUIRES_INDUSTRY } from '../src/engine/balance';
 
@@ -135,6 +135,18 @@ describe('player orders', () => {
     expect(game().nations.GER.armies[0].moveTarget).toBeNull();
   });
 
+  it('moveArmy refuses to walk into a region held by a nation the player is at war with', () => {
+    useStore.getState().newGame('GER', 42);
+    const army = game().nations.GER.armies[0];
+    const neighbour = REGIONS[army.location].adjacent[0];
+    const hostileController = game().regions[neighbour].controller;
+    useStore.setState({
+      game: { ...game(), wars: [{ id: 'w', attackers: ['GER'], defenders: [hostileController], startTurn: 0 }] },
+    });
+    useStore.getState().moveArmy(army.id, neighbour);
+    expect(game().nations.GER.armies[0].moveTarget).toBeNull(); // refused — attack it via posture instead
+  });
+
   it('setAllocation normalizes to sum 1', () => {
     useStore.getState().newGame('GER', 42);
     useStore.getState().setAllocation({ army: 2, air: 1, navy: 1, civilian: 0 });
@@ -193,6 +205,36 @@ describe('player orders', () => {
     const count = game().nations.UK.guarantees.length;
     useStore.getState().guarantee('POL');
     expect(game().nations.UK.guarantees).toHaveLength(count);
+  });
+
+  it('declareWar creates the war and pulls in the target\'s alliance partners', () => {
+    useStore.getState().newGame('GER', 42);
+    expect(canDeclareWar(game(), 'POL')).toBe(true);
+    const coalition = coalitionOf(game(), 'POL');
+    expect(coalition).toContain('FRA'); // POL's own alliance partner in the 1938 data
+
+    useStore.getState().declareWar('POL');
+    const g = game();
+    expect(atWar(g, 'GER', 'POL')).toBe(true);
+    expect(g.nations.GER.relations.POL).toBe(-100);
+    // Every nation the preview named actually joined the defenders.
+    const war = g.wars.find((w) => w.attackers.includes('GER') && w.defenders.includes('POL'))!;
+    for (const id of coalition) expect(war.defenders).toContain(id);
+  });
+
+  it('declareWar refuses an already-hostile or same-faction target', () => {
+    useStore.getState().newGame('GER', 42);
+    useStore.getState().declareWar('POL');
+    const before = game();
+    useStore.getState().declareWar('POL'); // already at war — no-op
+    expect(game()).toBe(before);
+
+    resetStore();
+    useStore.getState().newGame('GER', 42); // GER is axis
+    expect(canDeclareWar(game(), 'ITA')).toBe(false); // ITA is also axis
+    const untouched = game();
+    useStore.getState().declareWar('ITA');
+    expect(game()).toBe(untouched);
   });
 });
 
