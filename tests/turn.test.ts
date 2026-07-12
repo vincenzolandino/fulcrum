@@ -114,10 +114,12 @@ describe('resolveTurn: flag and report hygiene', () => {
   });
 
   it('accumulates war dead from regions lost once fighting starts', () => {
-    // Japan and China are at war from the start; within a few turns China
-    // loses ground and the ledger starts counting.
-    let s = buildInitialState('POL', 42);
-    for (let i = 0; i < 8 && s.gameOver === null; i++) {
+    // Japan and China are at war from the start, and the pre-war crises pull
+    // more powers in through 1939. Over this window ground changes hands and
+    // the ledger starts counting. A wide window keeps the check off any one
+    // seed's exact capture turn.
+    let s = buildInitialState('POL', 7);
+    for (let i = 0; i < 16 && s.gameOver === null; i++) {
       s = resolveTurn(s, { aiControlsPlayer: true });
     }
     const total = Object.entries(s.flags)

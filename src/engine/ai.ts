@@ -40,6 +40,10 @@ import {
   AI_DOW_BASE_THRESHOLD,
   AI_DOW_MIN_THRESHOLD,
   AI_DOW_OPPORTUNISM_FACTOR,
+  AI_DOW_TENSION_BASE,
+  AI_DOW_TENSION_SLOPE,
+  SCRIPTED_CLAIM_REGIONS,
+  SCRIPTED_ERA_END_TURN,
   AI_ELASTIC_RATIO,
   AI_FACTION_JOIN_RELATIONS,
   AI_FACTION_JOIN_TENSION,
@@ -291,8 +295,16 @@ function orderedClaims(s: GameState, n: Nation): RegionId[] {
 function runAmbitions(s: GameState, id: NationId, rng: Rng): GameState {
   const n = s.nations[id];
   if (n.claims.length === 0 || atWarAny(s, id)) return s;
-  // Democracies won't start offensive wars while the world stays calm.
-  if (n.government === 'democracy' && s.tension < DEMOCRACY_WAR_TENSION_GATE) return s;
+  // No power starts a war over a claim until world tension has climbed to its
+  // appetite for it. Aggressors have a low bar, the timid a high one; the
+  // 1938 crises (Anschluss, Munich) raise tension through events and pull the
+  // warmongers over their line around 1939. Democracies never go below the
+  // fixed diplomatic gate however eager their leadership.
+  const tensionGate = Math.max(
+    n.government === 'democracy' ? DEMOCRACY_WAR_TENSION_GATE : 0,
+    AI_DOW_TENSION_BASE - n.ai.aggression * AI_DOW_TENSION_SLOPE,
+  );
+  if (s.tension < tensionGate) return s;
 
   const threshold = Math.max(
     AI_DOW_MIN_THRESHOLD,
@@ -300,6 +312,10 @@ function runAmbitions(s: GameState, id: NationId, rng: Rng): GameState {
   );
   const power = totalPower(n);
   for (const rid of orderedClaims(s, n)) {
+    // Signature pre-war seizures belong to their authored crisis chains. The
+    // generic AI leaves them alone until the scripted era is over, so it can't
+    // preempt Anschluss, Munich, Danzig, Albania or the Winter War.
+    if (s.turn < SCRIPTED_ERA_END_TURN && SCRIPTED_CLAIM_REGIONS.includes(rid)) continue;
     const rs = s.regions[rid];
     const target = rs ? s.nations[rs.controller] : undefined;
     if (!target || !target.alive || target.id === id) continue;

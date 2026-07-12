@@ -208,9 +208,12 @@ describe('step 3: ambition-driven declarations of war', () => {
   // Fixture powers: GER 22.8, POL 4.0, FRA 14.75; FRA guarantees POL.
   // GER threshold = max(1.1, 2.2 − 0.9 − 0.4×0.5) = 1.1.
   // GER vs POL+FRA: 22.8 / 18.75 ≈ 1.216 ≥ 1.1 → war.
+  // Tension 40 clears GER's DoW tension gate (58 − 0.9×34 = 27.4); the claim is
+  // pol-warsaw, an unscripted region the generic AI may pursue directly.
   it('GER declares on its claim, and the guarantor joins the defenders', () => {
     const s = frozenTestState((st) => {
-      st.nations['GER'] = { ...st.nations['GER'], claims: ['pol-danzig'] };
+      st.tension = 40;
+      st.nations['GER'] = { ...st.nations['GER'], claims: ['pol-warsaw'] };
     });
     const out = runAI(s, rng(), { includePlayer: false });
     expect(out.wars).toHaveLength(1);
@@ -223,7 +226,11 @@ describe('step 3: ambition-driven declarations of war', () => {
   it('POL never initiates: same favorable ratio, cautious personality', () => {
     // POL boosted to power ~30.5 vs GER 22.8 → ratio ≈ 1.34, which clears the
     // aggressive threshold (1.1) but not POL's own (2.2 − 0.2 − 0.2 = 1.8).
+    // Tension 55 clears the DoW tension gate for both personalities (cautious
+    // gate 58 − 0.2×34 = 51.2, aggressive 27.4), so only the power threshold
+    // separates them — the point of the test.
     const boost = (st: GameState) => {
+      st.tension = 55;
       st.nations['POL'] = {
         ...st.nations['POL'],
         claims: ['ger-berlin'],
@@ -255,7 +262,7 @@ describe('step 3: ambition-driven declarations of war', () => {
         st.nations['GER'] = {
           ...st.nations['GER'],
           government: 'democracy',
-          claims: ['pol-danzig'],
+          claims: ['pol-warsaw'],
         };
       });
     expect(runAI(asDemocracy(49), rng(), { includePlayer: false }).wars).toHaveLength(0);

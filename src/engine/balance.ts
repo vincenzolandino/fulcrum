@@ -106,6 +106,30 @@ export const AI_ELASTIC_RATIO = 0.7;
 export const AI_DOW_BASE_THRESHOLD = 2.2; // threshold = base − aggression − 0.4×opportunism
 export const AI_DOW_OPPORTUNISM_FACTOR = 0.4;
 export const AI_DOW_MIN_THRESHOLD = 1.1;
+// World tension an aggressor needs before it starts a war over a claim. Scaled
+// by aggression so a warmonger (Germany, 0.9) moves once the pre-war crises
+// have escalated things, while a cautious power waits far longer. This keeps
+// the AI from invading on turn one and lets the 1938 diplomacy (Anschluss,
+// Munich) play out through events before the shooting starts.
+export const AI_DOW_TENSION_BASE = 58;
+export const AI_DOW_TENSION_SLOPE = 34; // gate = base − aggression × slope
+// Claims whose seizure is owned by an authored crisis chain (Anschluss,
+// Munich, Danzig/September, Albania, the Winter War, the Molotov–Ribbentrop
+// partition). The generic AI must not start a war over these during the
+// pre-war era, or it preempts the events and stalls the 1938–39 timeline.
+// After the scripted era it may pursue any that history left unresolved.
+export const SCRIPTED_CLAIM_REGIONS: string[] = [
+  'aus-austria', // Anschluss
+  'cze-sudetenland', // Munich
+  'pol-danzig', // Danzig / September 1939
+  'alb-albania', // Italy's Good Friday
+  'pol-east', // Molotov–Ribbentrop partition
+  'est-tallinn',
+  'lat-riga',
+  'lit-kaunas',
+  'fin-karelia', // the Winter War
+];
+export const SCRIPTED_ERA_END_TURN = 32; // ~September 1940
 export const AI_FACTION_JOIN_RELATIONS = 60;
 export const AI_FACTION_JOIN_TENSION = 60;
 export const AI_PEACE_WAR_SUPPORT = 25;

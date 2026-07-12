@@ -275,7 +275,7 @@ export const PREWAR_EVENTS: GameEvent[] = [
             body: 'Germany has formally demanded the cession of the Sudetenland. The fortress line lies almost entirely within the demanded zone.',
           },
         ],
-        aiWeight: 5,
+        aiWeight: 10,
       },
       {
         label: 'Demand the dissolution of Czechoslovakia',
@@ -387,7 +387,7 @@ export const PREWAR_EVENTS: GameEvent[] = [
             body: 'The British government proposes a four-power meeting to settle the transfer of the Sudeten districts.',
           },
         ],
-        aiWeight: 4,
+        aiWeight: 7,
       },
       {
         label: 'Stand with Prague',
@@ -409,7 +409,7 @@ export const PREWAR_EVENTS: GameEvent[] = [
             body: 'Britain and France have publicly committed to Czechoslovakia’s defence.',
           },
         ],
-        aiWeight: 2,
+        aiWeight: 1,
       },
     ],
   },
