@@ -2,11 +2,12 @@
 // randomness for the whole resolution flows through a single Rng derived from
 // (seed, turn) via turnRng, so the same save resolves identically every time.
 //
-// Order (per the implementation plan): clear transient flags → apply army
-// redeployment arrivals → AI → combat → (war-dead tally, entrenchment growth)
-// → economy → trade → research → covert → politics → diplomacy drift →
-// events → successions → chronicle → report pruning → game-over check
-// (+ epilogue) → turn + 1.
+// Order (per the implementation plan, plus the feedback-pass additions):
+// clear transient flags → apply army redeployment arrivals → AI → stamp
+// active iconic-battle flags → combat → (war-dead tally, entrenchment
+// growth) → economy → trade → research → covert → politics → diplomacy
+// drift → events → iconic battles (advance/detect) → successions →
+// chronicle → report pruning → game-over check (+ epilogue) → turn + 1.
 //
 // Flag conventions owned or consumed here:
 //   '_'-prefixed flags are transient and cleared at the start of every
@@ -22,6 +23,7 @@ import type { Flags, GameState, NationId, Rng } from './types';
 import { turnRng } from './rng';
 import { runAI } from './ai';
 import { runCombat } from './combat';
+import { applyIconicBattleFlags, runIconicBattles } from './iconicBattles';
 import { runEconomy } from './economy';
 import { runTrade } from './trade';
 import { runResearch } from './research';
@@ -188,6 +190,7 @@ export function resolveTurn(
   s = runSuccessionSweep(s, rng, true); // deaths from player choices between turns
   s = applyRedeployArrivals(s);
   s = runAI(s, rng, { includePlayer: aiControlsPlayer });
+  s = applyIconicBattleFlags(s);
   s = runCombat(s, rng);
   s = accumulateWarDead(s);
   s = growEntrenchment(s);
@@ -200,6 +203,7 @@ export function resolveTurn(
   s = runDiplomacy(s, rng);
   s = runEvents(s, rng, ALL_EVENTS);
   if (aiControlsPlayer) s = autoResolvePendingChoices(s, rng, ALL_EVENTS);
+  s = runIconicBattles(s, rng);
   s = runSuccessionSweep(s, rng, true); // deaths decreed by this turn's events
   s = runChronicle(s);
 

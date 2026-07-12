@@ -154,7 +154,11 @@ export type Effect =
   | { t: 'queueEvent'; id: string; delay: number }
   | { t: 'endGame'; verdict: string };
 
-export type ReportKind = 'intel' | 'front' | 'diplomatic' | 'domestic' | 'covert' | 'research';
+// 'battle' is distinct from 'front': it marks an iconic-battle phase or
+// resolution dispatch (see iconicBattles.ts), which BattleSpotlight.tsx
+// renders as a full-screen cinematic interstitial instead of an ordinary
+// report line.
+export type ReportKind = 'intel' | 'front' | 'diplomatic' | 'domestic' | 'covert' | 'research' | 'battle';
 
 export interface Report {
   kind: ReportKind;
@@ -219,6 +223,37 @@ export interface GameOverState {
   epilogue: string;
 }
 
+/**
+ * A named historical set-piece (see iconicBattles.ts for the catalog:
+ * Barbarossa, D-Day, the Battle of the Bulge). Pure data, same DSL
+ * conventions as GameEvent: `trigger` is a world-state Condition evaluated
+ * once per turn; once it holds the battle starts and runs for up to
+ * `maxDuration` turns, its `phases` narrating the fight in order. While
+ * active, combat.ts applies `intensityBonus` to the attacking side's power
+ * in `region` and suppresses the ordinary front report there — the
+ * spotlight's own phase/resolution report carries that information instead.
+ */
+export interface IconicBattle {
+  id: string;
+  name: string;
+  trigger: Condition;
+  region: RegionId;
+  attacker: NationId[];
+  defender: NationId[];
+  phases: { name: string; text: string }[];
+  maxDuration: number;
+  intensityBonus: number;
+  resolutionText: { attackerWins: string; defenderHolds: string; timedOut: string };
+}
+
+/** Runtime record of a battle in progress; see IconicBattle for the catalog entry it tracks. */
+export interface ActiveIconicBattle {
+  battleId: string;
+  region: RegionId;
+  phase: number;
+  startTurn: number;
+}
+
 export interface GameState {
   seed: number;
   turn: number; // 0 = Jan 1938
@@ -232,6 +267,7 @@ export interface GameState {
   queuedEvents: { id: string; fireTurn: number }[];
   pendingChoices: { eventId: string }[];
   missions: CovertMission[];
+  activeBattles: ActiveIconicBattle[];
   chronicle: ChronicleEntry[];
   reports: Report[];
   gameOver: GameOverState | null;

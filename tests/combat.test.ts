@@ -18,6 +18,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { runCombat, lostFlag, blockadeFlag, noOilFlag } from '../src/engine/combat';
+import { iconicBattleFlag, iconicDamageFlag } from '../src/engine/iconicBattles';
 import { INITIAL_CONTROL, REGION_IDS } from '../src/data/regions';
 import type {
   Army,
@@ -115,6 +116,7 @@ function makeState(specs: NationSpec[], wars: War[], mutate?: (s: GameState) => 
     queuedEvents: [],
     pendingChoices: [],
     missions: [],
+    activeBattles: [],
     chronicle: [],
     reports: [],
     gameOver: null,
@@ -452,5 +454,41 @@ describe('runCombat — modifiers', () => {
     expect(out.regions['pol-danzig'].controller).toBe('GER');
     expect(out.nations.POL.armies[0].strength).toBeCloseTo(40 - (9 * effRatio + 8), 8); // ≈ 10.2821576
     expect(out.nations.GER.armies[0].strength).toBeCloseTo(80 - 9 / effRatio, 8); // ≈ 76.2703478
+  });
+});
+
+describe('runCombat — iconic battle intensity', () => {
+  it('boosts only the attacker, suppresses the front report, and exposes casualties via flags', () => {
+    //   Same danzigState battle, but with an iconic-battle intensity of 1.5
+    //   flagged on pol-danzig. Only attack is scaled (defense unchanged):
+    //   attack = 6 × 1.5 = 9; defense = 3.364 (unchanged)
+    //   effRatio = 9 / 3.364 ≈ 2.6753863 → captured
+    const state = deepFreeze(danzigState((s) => {
+      s.flags[iconicBattleFlag('pol-danzig')] = 1.5;
+    }));
+    const out = runCombat(state, midRng());
+
+    const effRatio = 9 / 3.364;
+    const defLoss = 9 * effRatio + 8;
+    const atkLoss = 9 / effRatio;
+
+    expect(out.regions['pol-danzig'].controller).toBe('GER');
+    expect(out.nations.POL.armies[0].strength).toBeCloseTo(40 - defLoss, 8);
+    expect(out.nations.GER.armies[0].strength).toBeCloseTo(80 - atkLoss, 8);
+
+    // No ordinary front report, even though the player (POL) is involved —
+    // the spotlight owns this region's narration instead.
+    expect(out.reports.filter((r) => r.kind === 'front')).toHaveLength(0);
+
+    // Casualties exposed for iconicBattles.ts to narrate.
+    expect(out.flags[iconicDamageFlag('pol-danzig', 'atk')]).toBeCloseTo(atkLoss, 8);
+    expect(out.flags[iconicDamageFlag('pol-danzig', 'def')]).toBeCloseTo(defLoss, 8);
+  });
+
+  it('without the flag, behaves exactly as the unboosted battle (regression guard)', () => {
+    const state = deepFreeze(danzigState());
+    const out = runCombat(state, midRng());
+    expect(out.flags[iconicDamageFlag('pol-danzig', 'atk')]).toBeUndefined();
+    expect(out.reports.filter((r) => r.kind === 'front')).toHaveLength(1);
   });
 });

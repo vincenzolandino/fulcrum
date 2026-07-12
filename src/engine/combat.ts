@@ -10,6 +10,15 @@
 //   _blockade_{nation} — {nation} is naval-blockaded this turn (boolean)
 //   _nooil_{nation}    — set by economy.ts when the oil stockpile hit zero;
 //                        combat reads it and degrades equipment/air.
+//   _iconicbattle_{region} — set by iconicBattles.ts before this module runs,
+//                        for a region hosting an active named set-piece
+//                        (Barbarossa, D-Day, the Bulge): the value is the
+//                        attacker power multiplier for the battle there this
+//                        turn. When present, this module also writes
+//                        _iconicdmg_{region}_atk/def with this turn's
+//                        casualties (iconicBattles.ts narrates them) and
+//                        suppresses the ordinary front report for that
+//                        region — the spotlight's own report carries it.
 
 import type {
   Army,
@@ -22,6 +31,7 @@ import type {
 } from './types';
 import { REGIONS } from '../data/regions';
 import { blockadeFlag, noOilFlag, supplyFactor } from './economy';
+import { iconicBattleFlag, iconicDamageFlag } from './iconicBattles';
 import {
   AIR_SUPERIORITY_MOD,
   AIR_SUPERIORITY_RATIO,
@@ -269,6 +279,15 @@ function resolveBattle(work: GameState, war: War, regionId: RegionId, rng: Rng):
   const navyDef = sideNavy(work, defSide);
   const amphibiousAllowed = navyAtk > 0 && navyAtk >= AMPHIBIOUS_NAVAL_RATIO * navyDef;
 
+  // An active iconic battle boosts only the attacking side — everything this
+  // side can throw at the objective, the way Barbarossa/D-Day/the Bulge
+  // massed force well past a normal front's doctrine. Boosting both sides
+  // equally would cancel out in effRatio and change nothing. Applied per
+  // attacker (not to the aggregate afterward) so each one's casualty share —
+  // power / attack — still sums to 1 across the side.
+  const iconicMult = work.flags[iconicBattleFlag(regionId)];
+  const intensity = typeof iconicMult === 'number' ? iconicMult : 1;
+
   // Attacker contributions.
   const attackers: Participant[] = [];
   for (const { nation, army, sea } of adjacentAttackers(work, atkSide, regionId)) {
@@ -277,7 +296,8 @@ function resolveBattle(work: GameState, war: War, regionId: RegionId, rng: Rng):
       armyPower(army, nation, isNoOil(work, nation.id)) *
       ATTACK_POSTURE_MOD[army.posture] *
       supplyFactor(work, nation.id, army.location) *
-      atkAirMod;
+      atkAirMod *
+      intensity;
     if (sea) power *= AMPHIBIOUS_ATTACK_FACTOR;
     attackers.push({ nation, army, power });
   }
@@ -356,6 +376,16 @@ function resolveBattle(work: GameState, war: War, regionId: RegionId, rng: Rng):
     if (p.army.strength <= 0) {
       p.nation.armies = p.nation.armies.filter((a) => a.id !== p.army.id);
     }
+  }
+
+  // A region hosting an active iconic battle gets its casualty numbers
+  // exposed via flags instead of an ordinary front report — iconicBattles.ts
+  // reads them this same turn to narrate the phase, and the routine report
+  // below is suppressed so the player isn't told the same thing twice.
+  if (typeof iconicMult === 'number') {
+    work.flags[iconicDamageFlag(regionId, 'atk')] = atkLossTotal;
+    work.flags[iconicDamageFlag(regionId, 'def')] = defLossTotal;
+    return;
   }
 
   // Front report for battles involving the player.

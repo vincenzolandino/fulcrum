@@ -5,6 +5,9 @@ import type { CSSProperties } from 'react';
 import type { Report, ReportKind } from '../engine/types';
 import { useStore } from '../store';
 
+// 'battle' is deliberately absent: iconic-battle dispatches get their own
+// full-screen BattleSpotlight overlay instead of a line here, so they never
+// appear twice.
 const KIND_ORDER: ReportKind[] = ['front', 'diplomatic', 'domestic', 'intel', 'covert', 'research'];
 
 const KIND_META: Record<ReportKind, { label: string; badge: string; color: string }> = {
@@ -14,6 +17,7 @@ const KIND_META: Record<ReportKind, { label: string; badge: string; color: strin
   intel: { label: 'Intelligence', badge: 'IN', color: 'var(--accent)' },
   covert: { label: 'Covert operations', badge: 'CV', color: 'var(--comintern)' },
   research: { label: 'Research bureau', badge: 'RS', color: 'var(--ok)' },
+  battle: { label: 'Battle dispatches', badge: 'BT', color: 'var(--danger)' },
 };
 
 const styles: Record<string, CSSProperties> = {

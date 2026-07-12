@@ -37,7 +37,12 @@ interface Milestones {
   fraFell: number | null; // France dead or exiled
   firstMajorWar: number | null; // first war among the great powers
   endTurn: number;
+  iconicBarbarossa: number | null;
+  iconicDday: number | null;
+  iconicBulge: number | null;
 }
+
+const iconicFired = (s: GameState, id: string): boolean => s.firedEvents.includes(id);
 
 const MAJORS: NationId[] = ['GER', 'FRA', 'UK', 'SOV', 'ITA', 'JAP', 'USA'];
 
@@ -46,6 +51,7 @@ function runOne(seed: number): Milestones {
   const m: Milestones = {
     gerPol: null, gerFra: null, gerSov: null, japUsa: null,
     fraFell: null, firstMajorWar: null, endTurn: FINAL_TURN,
+    iconicBarbarossa: null, iconicDday: null, iconicBulge: null,
   };
   for (let t = 0; t < FINAL_TURN; t++) {
     s = resolveTurn(s, { aiControlsPlayer: true });
@@ -55,6 +61,9 @@ function runOne(seed: number): Milestones {
     if (m.gerSov === null && atWar(s, 'GER', 'SOV')) m.gerSov = turn;
     if (m.japUsa === null && atWar(s, 'JAP', 'USA')) m.japUsa = turn;
     if (m.fraFell === null && (dead(s, 'FRA') || s.flags.EXILE_FRA === true)) m.fraFell = turn;
+    if (m.iconicBarbarossa === null && iconicFired(s, 'iconic-barbarossa')) m.iconicBarbarossa = turn;
+    if (m.iconicDday === null && iconicFired(s, 'iconic-dday')) m.iconicDday = turn;
+    if (m.iconicBulge === null && iconicFired(s, 'iconic-bulge')) m.iconicBulge = turn;
     if (m.firstMajorWar === null) {
       for (let i = 0; i < MAJORS.length; i++) {
         for (let j = i + 1; j < MAJORS.length; j++) {
@@ -104,4 +113,8 @@ console.log(`France falls            ${pct((m) => m.fraFell !== null && m.fraFel
 console.log(`Barbarossa (GER–SOV)    ${pct((m) => m.gerSov !== null)} ever   median ${median((m) => m.gerSov)}`);
 console.log(`Pacific (JAP–USA)       ${pct((m) => m.japUsa !== null)} ever   median ${median((m) => m.japUsa)}`);
 console.log(`Game resolved by 1948   ${pct((m) => m.endTurn < FINAL_TURN)}`);
-console.log(`Median campaign end     ${median((m) => m.endTurn)}\n`);
+console.log(`Median campaign end     ${median((m) => m.endTurn)}`);
+console.log(`\nIconic battles:`);
+console.log(`  Operation Barbarossa  ${pct((m) => m.iconicBarbarossa !== null)} ever   median ${median((m) => m.iconicBarbarossa)}`);
+console.log(`  The Return to France  ${pct((m) => m.iconicDday !== null)} ever   median ${median((m) => m.iconicDday)}`);
+console.log(`  The Ardennes Offensive ${pct((m) => m.iconicBulge !== null)} ever   median ${median((m) => m.iconicBulge)}\n`);

@@ -10,6 +10,7 @@ import TopBar from './ui/TopBar';
 import MapView from './ui/MapView';
 import SidePanel from './ui/SidePanel';
 import EventModal from './ui/EventModal';
+import BattleSpotlight from './ui/BattleSpotlight';
 import EndScreen from './ui/EndScreen';
 
 const styles: Record<string, CSSProperties> = {
@@ -37,6 +38,7 @@ function GameScreen() {
         <SidePanel />
       </main>
       <EventModal />
+      <BattleSpotlight />
     </div>
   );
 }

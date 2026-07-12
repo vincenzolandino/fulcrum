@@ -83,7 +83,7 @@ function duelState(
     },
     wars: [{ id: 'w1', attackers: ['GER'], defenders: ['POL'], startTurn: 0 }],
     tension: 20, flags: {}, firedEvents: [], queuedEvents: [], pendingChoices: [],
-    missions: [], chronicle: [], reports: [], gameOver: null,
+    missions: [], activeBattles: [], chronicle: [], reports: [], gameOver: null,
   };
   if (mutate) mutate(s);
   return deepFreeze(s);

@@ -71,6 +71,7 @@ export function buildInitialState(playerNation: NationId, seed: number): GameSta
     queuedEvents: [],
     pendingChoices: [],
     missions: [],
+    activeBattles: [],
     chronicle: [],
     reports: [],
     gameOver: null,

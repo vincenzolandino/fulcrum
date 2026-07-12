@@ -160,6 +160,7 @@ export function makeTestState(): GameState {
     queuedEvents: [],
     pendingChoices: [],
     missions: [],
+    activeBattles: [],
     chronicle: [],
     reports: [],
     gameOver: null,
