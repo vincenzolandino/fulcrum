@@ -26,9 +26,6 @@ type TabId = (typeof TABS)[number]['id'];
 
 const styles: Record<string, CSSProperties> = {
   shell: {
-    width: 400,
-    minWidth: 320,
-    height: '100%',
     display: 'flex',
     flexDirection: 'column',
     background: 'var(--bg-raised)',
@@ -69,7 +66,7 @@ export default function SidePanel() {
   const [active, setActive] = useState<TabId>('reports');
 
   return (
-    <aside style={styles.shell} aria-label="Briefing panels">
+    <aside className="side-panel" style={styles.shell} aria-label="Briefing panels">
       <div role="tablist" aria-label="Briefing tabs" style={styles.tabBar}>
         {TABS.map((t) => (
           <button

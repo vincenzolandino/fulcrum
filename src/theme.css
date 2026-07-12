@@ -45,3 +45,47 @@ button {
   color: var(--ink);
   font-family: var(--font-doc);
 }
+
+/* ---- Game layout (responsive) ----
+   Desktop: map table beside a fixed briefing cabinet.
+   Narrow/phone: stack the map on top, the panel full-width below, whole
+   column scrolls. Without this the 400px panel eats the width and the map
+   disappears entirely. */
+.game-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+.game-map {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.side-panel {
+  width: 400px;
+  min-width: 320px;
+  height: 100%;
+}
+
+@media (max-width: 820px) {
+  .game-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .game-map {
+    flex: none;
+    height: 46vh;
+    min-height: 240px;
+    touch-action: none; /* let the map own touch gestures, not the page */
+  }
+  .side-panel {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+}

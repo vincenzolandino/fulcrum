@@ -14,15 +14,6 @@ import EndScreen from './ui/EndScreen';
 
 const styles: Record<string, CSSProperties> = {
   frame: { display: 'flex', flexDirection: 'column', height: '100%' },
-  body: { flex: 1, minHeight: 0, display: 'flex', gap: 12, padding: 12 },
-  mapWrap: {
-    flex: 1,
-    minWidth: 0,
-    border: '1px solid var(--border)',
-    borderRadius: 3,
-    overflow: 'hidden',
-    background: 'var(--bg)',
-  },
 };
 
 function GameScreen() {
@@ -34,8 +25,8 @@ function GameScreen() {
   return (
     <div style={styles.frame}>
       <TopBar />
-      <main style={styles.body}>
-        <div style={styles.mapWrap}>
+      <main className="game-body">
+        <div className="game-map">
           <MapView
             state={game}
             selected={selected}
